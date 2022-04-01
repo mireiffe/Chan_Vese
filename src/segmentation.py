@@ -1,60 +1,35 @@
 import os
-import pickle
 import time
+import pickle
 
-import logging
 from colorama import Fore
 from tqdm import tqdm
 from tqdm._utils import _term_move_up
 
+import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-import cv2
-import itertools
 
-from functions import Functions, Operators, nzdiv
+import myTools as mts
 
 
 class ChanVese(object):
     eps = np.finfo(float).eps
 
-    def __init__(self, imgs, args, initials):
-        self.img = imgs[0]
-        self.initials = initials
-        self.N = args.N
-        self.n_phi = int(np.ceil(np.log2(args.N)))
-        self.mu = args.mu
-        self.nu = args.nu
-        self.tol = args.tol
-        self.dt = args.dt
-        self.vismode = args.vismode
-        self.visterm = args.visterm
+    def __init__(self, N=2, nu, mu, dt=.2, initial=None, reinterm=5, vismode=False, visterm=5):
+        self.N = N
+        self.n_phi = int(np.ceil(np.log2(N)))
+        self.mu = mu
+        self.nu = nu
+        self.dt = dt
+        self.tol = tol
+        self.initial = initial
+        self.reinterm = reinterm
+        self.vismode = vismode
+        self.visterm = visterm
 
-        init_time = time.strftime('%b%d', time.localtime(time.time()))
-        self.sv_dir = os.path.join('results')
-        self.sv_nm = os.path.join(self.sv_dir, args.dt_dir)
-
-        self.funs = Functions(eps=args.eps, m_eps=self.m_eps)
-        # ksz=1: proper gradient, =3: sobel, =-1: shcarr
-        self.ops = Operators(h=1, ksz=-1, m_eps=self.m_eps)
-
-        if args.sig_scl[0]:
-            dim = args.sig_scl[1] * args.sig_scl[2]
-            dim_img = self.img.size
-            self.sig = args.sig * np.sqrt(dim_img / dim)
-        else:
-            self.sig = args.sig
-
-        self.w = np.ceil(4 * self.sig + 1) // 2 * 2 + 1
-        lo = (self.w - 1) // 2
-        x, y = np.arange(self.w), np.arange(self.w)
-        self.ker = self.funs.fun_ker(x, y, lo, self.sig)
-        self.onek = cv2.filter2D(np.ones_like(self.img), -1, self.ker[::-1, ::-1], borderType=cv2.BORDER_CONSTANT)
-
-        self.err_b, self.err_c, self.err_phi = 1E5, 1E5, [1E5] * self.n_phi
-
-    def init_vars(self):
-        if self.initials is not None:
+    def initC(self):
+        if self.initials == None:
             self.phis = [cv2.resize(inis, self.img.shape[::-1], interpolation=cv2.INTER_LINEAR)
                         for inis in self.initials[0]]
             self.b = cv2.resize(self.initials[1], self.img.shape[::-1], interpolation=cv2.INTER_LINEAR)
@@ -217,13 +192,3 @@ class ChanVese(object):
                         plt.show()
                     else:
                         plt.pause(keep_time)
-
-    def saving(self, vardict):
-        try:
-            os.mkdir(self.sv_dir)
-            logging.info('Created checkpoint directory')
-        except OSError:
-            pass
-        with open(self.sv_nm, 'wb') as f:
-            pickle.dump(vardict, f)
-        logging.info(f'{self.sv_nm} is saved!!')
