@@ -2,8 +2,8 @@ import os
 import time
 import pickle
 
-from colorama import Fore
 from tqdm import tqdm
+from colorama import Fore
 from tqdm._utils import _term_move_up
 
 import cv2
@@ -11,184 +11,110 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 import myTools as mts
+from reinitial import Reinitial
 
 
 class ChanVese(object):
     eps = np.finfo(float).eps
 
-    def __init__(self, N=2, nu, mu, dt=.2, initial=None, reinterm=5, vismode=False, visterm=5):
+    def __init__(self, N=2, nu=.5, dt=.2, method='gray', initial=None, tol=1E-03, reinterm=5, vismode=False, visterm=5):
         self.N = N
-        self.n_phi = int(np.ceil(np.log2(N)))
-        self.mu = mu
         self.nu = nu
         self.dt = dt
         self.tol = tol
+        self.method = method
         self.initial = initial
         self.reinterm = reinterm
         self.vismode = vismode
         self.visterm = visterm
 
-    def initC(self):
-        if self.initials == None:
-            self.phis = [cv2.resize(inis, self.img.shape[::-1], interpolation=cv2.INTER_LINEAR)
-                        for inis in self.initials[0]]
-            self.b = cv2.resize(self.initials[1], self.img.shape[::-1], interpolation=cv2.INTER_LINEAR)
-            self.c = self.initials[2]
+        self.n_phi = int(np.ceil(np.log2(N)))
 
-        else:
-            self.b = np.ones_like(self.img)
-            self.c = [0] * self.N
+    def segmentation(self, img: np.ndarray):
+        img0 = img
+        if img.ndim == 1:
+            assert 'Image dimension must be larger than 2'
+        elif img.ndim == 2:
+            if self.method == 'vector':
+                img = img[..., np.newaxis]
+        elif img.ndim >= 3:
+            if self.method == 'gray':
+                img = img.mean(axis=2)
 
-            _mu, _sig = self.img.mean(), self.img.std()
-            _lev = range(1, 1 - self.n_phi, -1)
-            _lev = range(1, 1 + self.n_phi)
-            #self.phis = [np.where(self.img > _mu + l * _sig, -1., 1.) for l in _lev]
-            self.phis = [np.where(self.img > _mu + l * _sig, (-1)**k * -1., (-1)**k * 1.) for k, l in enumerate(_lev)]
-
-    def updt_bbk(self):
-        self.bk = cv2.filter2D(self.b, -1, self.ker[::-1, ::-1], borderType=cv2.BORDER_CONSTANT)
-        self.bbk = cv2.filter2D(self.b * self.b, -1, self.ker[::-1, ::-1], borderType=cv2.BORDER_CONSTANT)
-        
-    def updt_bc(self):
-        _oldc, _oldb = np.copy(self.b), np.copy(self.c)
-        # update c
-        self.H = [self.funs.hvsd(phi) for phi in self.phis]
-        H_ref = [(h, 1 - h) for h in self.H]
-        M = [np.prod(m, axis=0) for m in itertools.product(*H_ref)]
-        c_den = [np.sum(self.bk * self.img * m) for m in M]
-        c_num = [np.sum(self.bbk * m) for m in M]
-        self.c = nzdiv(c_den, c_num)
-
-        # update b
-        J1 = np.sum(np.prod((self.c, M), axis=0))
-        J2 = np.sum(np.prod((np.power(self.c, 2), M), axis=0))
-        b_den = cv2.filter2D(self.img * J1, -1, self.ker[::-1, ::-1], borderType=cv2.BORDER_CONSTANT)
-        b_num = cv2.filter2D(J2, -1, self.ker[::-1, ::-1], borderType=cv2.BORDER_CONSTANT)
-        self.b = nzdiv(b_den, b_num)
-        _newc, _newb = np.copy(self.b), np.copy(self.c)
-        self.err_b = nzdiv(self.ops.norm(_oldb - _newb), (self.ops.norm(_newb)))
-        self.err_c = nzdiv(self.ops.norm(_oldc - _newc), (self.ops.norm(_newc)))
-
-        self.err_b /= self.funs.fun_dt(self.glb_t) * self.dt
-        self.err_c /= self.funs.fun_dt(self.glb_t) * self.dt
-
-    def updt_phi(self):
-        self.updt_bbk()
-        
-        _e = [
-            self.img ** 2 * self.onek - 2 * ci * self.img * self.bk + ci ** 2 * self.bbk
-            for ci in self.c
-        ]
-        phi_t = 0
-
-        _pbar = tqdm(
-            total=50,
-            desc=f'Updating phi', unit='iter', leave=False, 
-            bar_format='{l_bar}%s{bar:25}%s{r_bar}{bar:-25b}' % (Fore.BLUE, Fore.RESET)
-        )
+        rein = Reinitial(dim_stack=0)
+        self.phis0 = self.initC(img, rein)
+        self.phis = np.copy(self.phis0)
+        k = 0
+        fig, (ax0, ax1) = plt.subplots(1, 2)
         while True:
-            phi_t += 1
-            self.glb_phi_t += 1
+            Hs = np.stack((mts.hvsd(self.phis), mts.hvsd(-self.phis)), axis=1)
+            self.c, pc_img = self.mkC(img, Hs)
+            kapps = mts.kappa(self.phis, mode=0, stackdim=0)[0]
+            dE = self.mkDE(img, Hs)
 
-            _old = np.copy(self.phis)
+            _phis = self.phis + self.dt * (self.nu * kapps - dE)
 
-            gphis = [self.ops.grad_img(phi) for phi in self.phis]
-            N_gphis = [self.ops.norm(gphi) for gphi in gphis]
+            if self.vismode and (k % self.visterm == 0):
+                ax0.cla()
+                ax1.cla()
+
+                #axis0
+                ax0.imshow(img0)
+                clrs = ['lime', 'red', 'blue', 'yellow']
+                for i, ph in enumerate(_phis):
+                    ax0.contour(ph, levels=[0], colors=clrs[i], linewidths=1.5)
+                ax0.set_title(f'Method: {self.method}')
+
+                # axis1
+                ax1.imshow(pc_img / 255, 'gray')
+                ax1.set_title(f'Iter: {k:d}')
+                plt.pause(0.05)
             
-            kappa = [self.ops.cvt_phi(phi, ksz=1) for phi in self.phis]
-            delta_phi = [self.funs.delta(phi) for phi in self.phis]
+            if k % self.reinterm == 0:
+                _phis = rein.getSDF(np.where(_phis < 0, -1., 1.))
+                # _phis = rein.getSDF(_phis)
 
-            dp_dpgs = [
-                [self.funs.fun_dp(n_gphi) * gphi[0], self.funs.fun_dp(n_gphi) * gphi[1]]
-                for n_gphi, gphi in list(zip(*[N_gphis, gphis]))
-            ]
-            divg = [self.ops.div_phi(ddp, ksz=1) for ddp in dp_dpgs]
+            self.phis = np.copy(_phis)
+            k += 1
+        
+    def initC(self, img: np.ndarray, rein):
+        shifts = [(0, 0), (1.75, 1), (1, 1.75), (1.35, 1.35)]
+        # shifts = [(0, 0)] * 4
+        nums = [20, 20, 20, 20]
+        if self.initial == None:
+            m, n = img.shape[:2] 
+            circs = np.array([mts.patCirc(m, n, nums=nums[_], shift=shifts[_]) for _ in range(self.n_phi)])
+        return rein.getSDF(np.where(circs, -1., 1.))
 
-            if self.N >= 1 and self.N <= 2:
-                dE = [_e[0] - _e[1]]
-            elif self.N >= 3 and self.N <= 4:
-                dE = [self.H[1] * (_e[0] - _e[2]) + (1 - self.H[1]) * (_e[1] - _e[3]),
-                    self.H[0] * (_e[0] - _e[1]) + (1 - self.H[0]) * (_e[2] - _e[3])]
-            else:
-                print('Use appropriate value of N!!')
+    def mkC(self, img, Hs):
+        c = []
+        pc_img = np.zeros_like(img).astype(float)
+        for dn in range(2**self.n_phi):
+            bn = eval(f"f'{dn:0{self.n_phi}b}'")
+            _H = np.ones_like(Hs[0][0])
+            for ip in range(self.n_phi):
+                _H = _H * Hs[ip][int(bn[ip])]
+            mean_reg = (_H > .5)
+            if self.method == 'gray':
+                c.append((img * mean_reg).sum(axis=(0, 1)) / (mean_reg.sum() + 1E-05))
+            elif self.method == 'vector':
+                c.append((img * mean_reg[..., np.newaxis]).sum(axis=(0, 1)) / (mean_reg.sum() + 1E-05))
+                _H = _H[..., np.newaxis]
+            pc_img += _H * c[dn]
+        return np.array(c), pc_img
 
-            dphis = [
-                - dp * de + self.nu * dp * kp + self.mu * dv
-                for dp, kp, dv, de in list(zip(*[delta_phi, kappa, divg, dE]))
-            ]
-            self.phis = [
-                phi + (self.dt * self.funs.fun_dt(self.glb_t)) * nzdiv(dphi, np.abs(dphi).max())
-                for phi, dphi in list(zip(*[self.phis, dphis]))
-            ]
-            if phi_t == 1:
-                self.phis = [np.where(phi < 0, -1., 1.) for phi in self.phis]
-            
-            _new = np.copy(self.phis)
-            err_reg = np.where(np.abs(_new) < 1.5, 1., 0.)
-
-            self.err_phi = [
-                self.ops.norm(err_reg * (o - n)) / err_reg.sum() / self.dt / self.funs.fun_dt(self.glb_t)
-                for o, n in list(zip(*[_old, _new]))
-            ]
-
-            _pbar.set_postfix_str('Error phi='+', '.join([f'{ep:.2E}' for ep in self.err_phi]))
-            _pbar.update()
-            
-            self.guis()
-
-            if (phi_t > 10 and np.max(self.err_phi) < self.tol[0]) or phi_t > 50:
-                _pbar.close()
-                break
-
-    def guis(self, fignum=500, keep=False, keep_time=0.01, mask=None):
-        if self.vismode:
-            if self.visterm == 0:
-                if mask is not None:
-                    fig = plt.figure(fignum)
-                    ax = fig.subplots(2, 1)
-                    ax[0].cla()
-                    ax[0].imshow(self.img, 'gray')
-                    clrs = ['red', 'green']
-                    print(phis[0].shape)
-                    for i, phi in enumerate(self.phis):
-                        ax[0].contour(phi, levels=0, colors=clrs[i], linestyles='solid')
-                    ax[1].imshow(mask)
-                    ax[1].imshow(self.img, 'gray', alpha=0.75)
-                    if keep:
-                        plt.show()
-                    else:
-                        plt.pause(keep_time)
-            elif self.glb_phi_t % self.visterm == 0 or mask is not None:
-                fig = plt.figure(fignum)
-                if mask is not None:
-                    fig.clf()
-                    ax = fig.subplots(2, 1)
-                    ax[0].cla()
-                    ax[0].imshow(self.img, 'gray')
-                    clrs = ['red', 'green']
-                    for i, phi in enumerate(self.phis):
-                        ax[0].contour(phi, levels=0, colors=clrs[i], linestyles='solid')
-                    ax[1].imshow(mask)
-                    ax[1].imshow(self.img, 'gray', alpha=0.75)
-                    if keep:
-                        plt.show()
-                    else:
-                        plt.pause(keep_time)
-                else:
-                    fig.clf()
-                    ax = fig.subplots(1, 1)
-                    ax.cla()
-                    M1 = (self.phis[0] < 0) * (self.phis[1] < 0)
-                    M2 = (self.phis[0] < 0) * (self.phis[1] >= 0)
-                    M3 = (self.phis[0] >= 0) * (self.phis[1] < 0)
-                    M4 = (self.phis[0] >= 0) * (self.phis[1] >= 0)
-  
-                    M = M1 + 2*M2 + 3*M3 + 4*M4
-                    ax.imshow(M)
-                    clrs = ['red', 'lime']
-                    for i, phi in enumerate(self.phis):
-                        ax.contour(phi, levels=0, colors=clrs[i], linewidths=1.5)
-                    if keep:
-                        plt.show()
-                    else:
-                        plt.pause(keep_time)
+    def mkDE(self, img, Hs):
+        de = []
+        for j, phi in enumerate(self.phis):
+            _d = np.zeros_like(phi)
+            for t in range(2**self.n_phi):
+                bn = eval(f"f'{t:0{self.n_phi}b}'")
+                _r = np.ones_like(_d)
+                for i in np.setdiff1d(range(self.n_phi), j):
+                    _r = _r * Hs[i][int(bn[i])]
+                _e = (img - self.c[t])**2
+                if self.method == 'vector':
+                    _e = _e.sum(axis=2)
+                _d += (-1)**(int(bn[j]) + 0) * _e * _r
+            de.append(_d * mts.delta(phi))
+        return np.array(de)
