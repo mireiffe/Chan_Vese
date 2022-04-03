@@ -26,9 +26,17 @@ if __name__ == '__main__':
         img = mts.gaussfilt(img0, sig=1)
 
         sts = mts.SaveTools(join(dir_save, nm_img))
-        pc_img, phis = cvseg.segmentation(img)
+        # pc_img, phis = cvseg.segmentation(img)
 
-        mts.makeDir(join(dir_save, nm_img))
-        sts.imshow(img0, 'input')
-        sts.imshow(pc_img / 255, 'output')
-        sts.saveFile({'img': img0, 'phis': phis}, 'phis.pck')
+        from skimage.segmentation import slic
+        from skimage.segmentation import mark_boundaries
+
+        segments = slic(img0, n_segments = 8, sigma = 5)
+
+        plt.figure(); plt.imshow(mark_boundaries(img0, slic(img0, n_segments = 200, sigma = 5)))
+
+        pass
+        # mts.makeDir(join(dir_save, nm_img))
+        # sts.imshow(img0, 'input')
+        # sts.imshow(pc_img / 255, 'output')
+        # sts.saveFile({'img': img0, 'phis': phis}, 'phis.pck')
