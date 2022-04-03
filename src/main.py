@@ -34,13 +34,15 @@ if __name__ == '__main__':
             img0 = plt.imread(f'./data/{nm_img}.jpg')
         except FileExistsError:
             img0 = plt.imread(f'./data/{nm_img}.png')
-        img = mts.gaussfilt(img0, sig=2)
+        # img = mts.gaussfilt(img0, sig=2)
 
         sts = mts.SaveTools(join(dir_save, nm_img))
         # pc_img, phis = cvseg.segmentation(img)
 
         plt.figure()
         plt.imshow(quantimage(img0,5))
+
+        pass
 
         # mts.makeDir(join(dir_save, nm_img))
         # sts.imshow(img0, 'input')
