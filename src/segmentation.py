@@ -54,6 +54,7 @@ class ChanVese(object):
 
             _phis = self.phis + self.dt * (self.nu * kapps - dE)
 
+            print(f"Iteration: {k:d}", end='\r')
             if self.vismode and (k % self.visterm == 0):
                 ax0.cla()
                 ax1.cla()
@@ -74,8 +75,12 @@ class ChanVese(object):
                 _phis = rein.getSDF(np.where(_phis < 0, -1., 1.))
                 # _phis = rein.getSDF(_phis)
 
+            if (k >= 1500) or np.sqrt(((_phis - self.phis)**2).sum()) < self.tol:
+                break
+
             self.phis = np.copy(_phis)
             k += 1
+        return pc_img, _phis
         
     def initC(self, img: np.ndarray, rein):
         shifts = [(0, 0), (1.75, 1), (1, 1.75), (1.35, 1.35)]
