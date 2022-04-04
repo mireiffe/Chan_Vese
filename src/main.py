@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from anisodiff import anisodiff
 from segmentation import ChanVese
 import myTools as mts
+from gadf import GADF
 
 
 if __name__ == '__main__':
@@ -25,12 +26,16 @@ if __name__ == '__main__':
         except FileExistsError:
             img0 = plt.imread(f'./data/{nm_img}.png')
         img = mts.gaussfilt(img0, sig=2)
-        aimg = mts.gaussfilt(img0, sig=2)
-
+        aimg = anisodiff(img0, niter=20)
         sts = mts.SaveTools(join(dir_save, nm_img))
-        pc_img, phis = cvseg.segmentation(img)
 
-        mts.makeDir(join(dir_save, nm_img))
-        sts.imshow(img0, 'input')
-        sts.imshow(pc_img / 255, 'output')
-        sts.saveFile({'img': img0, 'phis': phis}, 'phis.pck')
+        gadf = GADF(aimg, sig=0)
+        fa = gadf.Fa
+        er = gadf.Er
+
+
+        pass
+        # mts.makeDir(join(dir_save, nm_img))
+        # sts.imshow(img0, 'input')
+        # sts.imshow(pc_img / 255, 'output')
+        # sts.saveFile({'img': img0, 'phis': phis}, 'phis.pck')
