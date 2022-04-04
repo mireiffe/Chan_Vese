@@ -35,16 +35,18 @@ if __name__ == '__main__':
         except FileExistsError:
             img0 = plt.imread(f'./data/{nm_img}.png')
         img = mts.gaussfilt(img0, sig=1)
+        aimg = anisodiff(img0, niter=5)
 
         sts = mts.SaveTools(join(dir_save, nm_img))
         # pc_img, phis = cvseg.segmentation(img)
 
         from skimage.segmentation import slic
+        from skimage.measure import label
         from skimage.segmentation import mark_boundaries
+        from anisodiff import anisodiff
 
-        superpixel = slic(img0, n_segments = 500, sigma = 1)
-        quant = quantimage(img0, 8)
-
+        superpixel = slic(img0, n_segments = 500, sigma = 1, start_label=1)
+        quant = quantimage(img0, 16)
         plt.figure(); plt.imshow(mark_boundaries(quant, superpixel))
 
         pass
