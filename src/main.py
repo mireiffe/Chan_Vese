@@ -2,6 +2,7 @@ from os.path import join
 
 import matplotlib.pyplot as plt
 
+from anisodiff import anisodiff
 from segmentation import ChanVese
 import myTools as mts
 
@@ -23,7 +24,8 @@ if __name__ == '__main__':
             img0 = plt.imread(f'./data/{nm_img}.jpg')
         except FileExistsError:
             img0 = plt.imread(f'./data/{nm_img}.png')
-        img = mts.gaussfilt(img0, sig=1)
+        img = mts.gaussfilt(img0, sig=2)
+        aimg = mts.gaussfilt(img0, sig=2)
 
         sts = mts.SaveTools(join(dir_save, nm_img))
         pc_img, phis = cvseg.segmentation(img)
