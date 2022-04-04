@@ -19,6 +19,7 @@ if __name__ == '__main__':
 
     dir_save = './results/'
     nm_imgs = ['000000046048']
+    nm_imgs = ['000000039769']
 
     def quantimage(image,k):
         i = np.float32(image).reshape(-1,3)
@@ -28,6 +29,11 @@ if __name__ == '__main__':
         final_img = center[label.flatten()]
         final_img = final_img.reshape(image.shape)
         return final_img
+
+    from skimage.segmentation import slic
+    from skimage.measure import label
+    from skimage.segmentation import mark_boundaries
+    from anisodiff import anisodiff
 
     for nm_img in nm_imgs:
         try:
@@ -39,11 +45,6 @@ if __name__ == '__main__':
 
         sts = mts.SaveTools(join(dir_save, nm_img))
         # pc_img, phis = cvseg.segmentation(img)
-
-        from skimage.segmentation import slic
-        from skimage.measure import label
-        from skimage.segmentation import mark_boundaries
-        from anisodiff import anisodiff
 
         superpixel = slic(img0, n_segments = 500, sigma = 1, start_label=1)
         quant = quantimage(img0, 16)
