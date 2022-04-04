@@ -34,6 +34,8 @@ if __name__ == '__main__':
     from skimage.measure import label
     from skimage.segmentation import mark_boundaries
     from anisodiff import anisodiff
+    import matplotlib.patches as patches
+    from reinitial import Reinitial
 
     for nm_img in nm_imgs:
         try:
@@ -47,8 +49,39 @@ if __name__ == '__main__':
         # pc_img, phis = cvseg.segmentation(img)
 
         superpixel = slic(img0, n_segments = 500, sigma = 1, start_label=1)
-        quant = quantimage(img0, 16)
-        plt.figure(); plt.imshow(mark_boundaries(quant, superpixel))
+        quant = quantimage(img0, 8)
+        # plt.figure(); plt.imshow(mark_boundaries(quant, superpixel))
+
+        # rein = Reinitial(fmm=True)
+        rein = Reinitial(dt=.2, width=3)
+
+        m, n = img.shape[:2]
+
+        # fig, ax = plt.subplots()
+        # ax.imshow(img0)
+        # lbl_quant = label(quant.mean(axis=2))
+        # for l in np.unique(lbl_quant):
+        #     ir = np.where(lbl_quant == l)
+        #     if ((0 in ir[0]) or (n in ir[0])) or ((0 in ir[1]) or (m in ir[1])):
+        #         continue
+        #     _r = np.where(lbl_quant == l, 1., 0.)
+        #     r = mts.imErodDil(_r, 5, kernel_type='rectangular')
+        #     r = mts.imDilErod(r, 5, kernel_type='rectangular')
+        #     if len(ir[0]) < 300:
+        #         continue
+
+        #     _p = rein.getSDF(.5 - r)
+        #     cal_reg = np.abs(_p) < 2.9
+        #     kapp = mts.kappa(_p)[0]
+        #     skapp = np.sign(kapp)
+        #     kapp_sum = (skapp * cal_reg).sum() / cal_reg.sum()
+        #     if kapp_sum < .2:
+        #         continue
+        #     my, mx = ir[1].min(), ir[0].min()
+        #     My, Mx = ir[1].max(), ir[0].max()
+        #     rect = patches.Rectangle((my, mx), My-my, Mx-mx, linewidth=1, edgecolor='r', facecolor='none')
+        #     ax.add_patch(rect)
+
 
         pass
         # mts.makeDir(join(dir_save, nm_img))
