@@ -17,9 +17,6 @@ if __name__ == '__main__':
         # reinterm=10, vismode=False, visterm=10
     )
 
-    dir_save = './results/'
-    nm_imgs = ['000000046048']
-
     def quantimage(image,k):
         i = np.float32(image).reshape(-1,3)
         condition = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,20,1.0)
@@ -29,22 +26,26 @@ if __name__ == '__main__':
         final_img = final_img.reshape(image.shape)
         return final_img
 
+    dir_img = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/coco2017/validation/data'
+    dir_save = './results/'
+    nm_imgs = ['000000046048']
+    nm_imgs = ['000000039769']
+    # nm_imgs = ['000000059598']
     for nm_img in nm_imgs:
         try:
-            img0 = plt.imread(f'./data/{nm_img}.jpg')
+            img0 = plt.imread(f'{dir_img}{nm_img}.jpg')
         except FileExistsError:
-            img0 = plt.imread(f'./data/{nm_img}.png')
-        # img = mts.gaussfilt(img0, sig=2)
+            img0 = plt.imread(f'{dir_img}{nm_img}.png')
+        img = mts.gaussfilt(img0, sig=1.5)
 
         sts = mts.SaveTools(join(dir_save, nm_img))
-        # pc_img, phis = cvseg.segmentation(img)
+        quant_img = quantimage(img0,8)
 
         plt.figure()
-        plt.imshow(quantimage(img0,5))
+        plt.imshow(quant_img)
 
         pass
 
-        # mts.makeDir(join(dir_save, nm_img))
-        # sts.imshow(img0, 'input')
-        # sts.imshow(pc_img / 255, 'output')
-        # sts.saveFile({'img': img0, 'phis': phis}, 'phis.pck')
+        mts.makeDir(join(dir_save, nm_img))
+        sts.imshow(img0, 'input')
+        sts.imshow(quant_img / 255, 'output')
