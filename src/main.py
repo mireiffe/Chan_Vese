@@ -15,7 +15,10 @@ if __name__ == '__main__':
         # reinterm=10, vismode=False, visterm=10
     )
 
-    dir_img = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/val2017/'
+    dir_data = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/coco2017/validation/'
+    dir_img = f'{dir_data}data'
+    dir_mask = f'{dir_data}mask'
+    
     dir_save = './results/'
     nm_imgs = ['000000046048']
     nm_imgs = ['000000039769']
