@@ -24,9 +24,9 @@ class GADF():
         er = self.edgeRegion()
         er1 = self.fineEr(iter=5, coeff=4)
         er2 = self.fineEr(er1, iter=3, coeff=4)
-        er3 = self.fineEr(er2, iter=3, coeff=4)
-        res = cv2.dilate(er3.astype(float), np.ones((5, 5)))
-        res = self.fineEr(er3, iter=2, coeff=4)
+        # er3 = self.fineEr(er2, iter=3, coeff=4)
+        res = cv2.dilate(er2.astype(float), np.ones((5, 5)))
+        res = self.fineEr(er2, iter=2, coeff=4)
 
         # self.Er = er1
         self.Er = res
