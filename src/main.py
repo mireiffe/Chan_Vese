@@ -8,7 +8,7 @@ import myTools as mts
 
 if __name__ == '__main__':
     cvseg = ChanVese(
-        N=2, nu=5, dt=.2, tol=1E-03,
+        N=4, nu=5, dt=.2, tol=1E-03,
         method='vector', initial=None,
         # method='gray', initial=None,
         reinterm=10, vismode=True, visterm=10
@@ -19,13 +19,13 @@ if __name__ == '__main__':
     dir_save = './results/'
     nm_imgs = ['000000046048']
     nm_imgs = ['000000039769']
-    nm_imgs = ['000000547383']
+    nm_imgs = ['000000059598']
     for nm_img in nm_imgs:
         try:
             img0 = plt.imread(f'{dir_img}{nm_img}.jpg')
         except FileExistsError:
             img0 = plt.imread(f'{dir_img}{nm_img}.png')
-        img = mts.gaussfilt(img0, sig=1)
+        img = mts.gaussfilt(img0, sig=1.5)
 
         sts = mts.SaveTools(join(dir_save, nm_img))
         pc_img, phis = cvseg.segmentation(img)
