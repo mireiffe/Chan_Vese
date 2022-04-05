@@ -49,7 +49,7 @@ if __name__ == '__main__':
         # pc_img, phis = cvseg.segmentation(img)
 
         superpixel = slic(img0, n_segments = 500, sigma = 1, start_label=1)
-        quant = quantimage(img0, 8)
+        quant = quantimage(img0, 5)
         # plt.figure(); plt.imshow(mark_boundaries(quant, superpixel))
 
         # rein = Reinitial(fmm=True)
