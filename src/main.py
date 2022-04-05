@@ -17,9 +17,11 @@ if __name__ == '__main__':
         # reinterm=10, vismode=False, visterm=10
     )
 
+    dir_img = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/val2017/'
     dir_save = './results/'
     nm_imgs = ['000000046048']
     nm_imgs = ['000000039769']
+    nm_imgs = ['000000046804']
 
     def quantimage(image,k):
         i = np.float32(image).reshape(-1,3)
@@ -39,9 +41,9 @@ if __name__ == '__main__':
 
     for nm_img in nm_imgs:
         try:
-            img0 = plt.imread(f'./data/{nm_img}.jpg')
+            img0 = plt.imread(f'{dir_img}{nm_img}.jpg')
         except FileExistsError:
-            img0 = plt.imread(f'./data/{nm_img}.png')
+            img0 = plt.imread(f'{dir_img}{nm_img}.png')
         img = mts.gaussfilt(img0, sig=1)
         aimg = anisodiff(img0, niter=5)
 
