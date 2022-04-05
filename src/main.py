@@ -8,32 +8,35 @@ import myTools as mts
 
 if __name__ == '__main__':
     cvseg = ChanVese(
-        N=4, nu=5, dt=.2, tol=1E-03,
+        N=4, nu=1, dt=1, tol=1E-03,
         method='vector', initial=None,
         # method='gray', initial=None,
-        reinterm=10, vismode=True, visterm=10
+        reinterm=5, vismode=True, visterm=20
         # reinterm=10, vismode=False, visterm=10
     )
 
     dir_data = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/coco2017/validation/'
-    dir_img = f'{dir_data}data'
-    dir_mask = f'{dir_data}mask'
-    
+    dir_img = f'{dir_data}data/'
+    dir_mask = f'{dir_data}mask/'
     dir_save = './results/'
-    nm_imgs = ['000000046048']
-    nm_imgs = ['000000039769']
-    nm_imgs = ['000000059598']
+
+    nm_imgs = [39769]
+    nm_imgs = [59598]
     for nm_img in nm_imgs:
+        name_save = join(dir_save, f'{nm_img:012d}')
         try:
-            img0 = plt.imread(f'{dir_img}{nm_img}.jpg')
+            img0 = plt.imread(f'{dir_img}{nm_img:012d}.jpg')
         except FileExistsError:
-            img0 = plt.imread(f'{dir_img}{nm_img}.png')
+            img0 = plt.imread(f'{dir_img}{nm_img:012d}.png')
+        mask0 = mts.loadFile(f'{dir_mask}{nm_img:012d}.pck')
+        
         img = mts.gaussfilt(img0, sig=1.5)
+        mask = mask0 > .5
 
-        sts = mts.SaveTools(join(dir_save, nm_img))
-        pc_img, phis = cvseg.segmentation(img)
+        sts = mts.SaveTools(name_save)
+        pc_img, phis = cvseg.segmentation(img, mask=mask)
 
-        mts.makeDir(join(dir_save, nm_img))
+        mts.makeDir(name_save)
         sts.imshow(img0, 'input')
         sts.imshow(pc_img / 255, 'output')
         sts.saveFile({'img': img0, 'phis': phis}, 'phis.pck')

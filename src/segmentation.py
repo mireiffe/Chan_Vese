@@ -30,8 +30,9 @@ class ChanVese(object):
 
         self.n_phi = int(np.ceil(np.log2(N)))
 
-    def segmentation(self, img: np.ndarray):
+    def segmentation(self, img: np.ndarray, mask: np.ndarray):
         img0 = img
+        keepReg = 1 - mask
         if img.ndim == 1:
             assert 'Image dimension must be larger than 2'
         elif img.ndim == 2:
@@ -45,14 +46,15 @@ class ChanVese(object):
         self.phis0 = self.initC(img, rein)
         self.phis = np.copy(self.phis0)
         k = 0
-        fig, (ax0, ax1) = plt.subplots(1, 2)
+        _, (ax0, ax1) = plt.subplots(1, 2)
         while True:
             Hs = np.stack((mts.hvsd(self.phis), mts.hvsd(-self.phis)), axis=1)
-            self.c, pc_img = self.mkC(img, Hs)
+            c, pc_img = self.mkC(img, Hs, keepReg)
             kapps = mts.kappa(self.phis, mode=0, stackdim=0)[0]
-            dE = self.mkDE(img, Hs)
+            dE = self.mkDE(img, Hs, c, keepReg)
 
-            _phis = self.phis + self.dt * (self.nu * kapps - dE)
+            # _phis = self.phis + self.dt * (self.nu * kapps - (2**(self.n_phi-1) * dE - mask) * mts.delta(self.phis))
+            _phis = self.phis + self.dt * (self.nu * kapps - (dE - mask) * mts.delta(self.phis))
 
             print(f"Iteration: {k:d}", end='\r')
             if self.vismode and (k % self.visterm == 0):
@@ -67,7 +69,10 @@ class ChanVese(object):
                 ax0.set_title(f'Method: {self.method}')
 
                 # axis1
-                ax1.imshow(pc_img / 255, 'gray')
+                try:
+                    ax1.imshow(pc_img / 255, 'gray')
+                except:
+                    ax1.imshow(pc_img[..., 0] / 255, 'gray')
                 ax1.set_title(f'Iter: {k:d}')
                 plt.pause(0.05)
             
@@ -91,7 +96,7 @@ class ChanVese(object):
             circs = np.array([mts.patCirc(m, n, nums=nums[_], shift=shifts[_]) for _ in range(self.n_phi)])
         return rein.getSDF(np.where(circs, -1., 1.))
 
-    def mkC(self, img, Hs):
+    def mkC(self, img, Hs, keepReg):
         c = []
         pc_img = np.zeros_like(img).astype(float)
         for dn in range(2**self.n_phi):
@@ -99,16 +104,17 @@ class ChanVese(object):
             _H = np.ones_like(Hs[0][0])
             for ip in range(self.n_phi):
                 _H = _H * Hs[ip][int(bn[ip])]
-            mean_reg = (_H > .5)
+            mean_reg = (_H > .5) * keepReg
             if self.method == 'gray':
-                c.append((img * mean_reg).sum(axis=(0, 1)) / (mean_reg.sum() + 1E-05))
+                c.append((img * mean_reg).sum(axis=(0, 1)) / ((mean_reg).sum() + 1E-05))
             elif self.method == 'vector':
                 c.append((img * mean_reg[..., np.newaxis]).sum(axis=(0, 1)) / (mean_reg.sum() + 1E-05))
                 _H = _H[..., np.newaxis]
-            pc_img += _H * c[dn]
+            pc_img += _H * c[dn] * keepReg[..., np.newaxis]
         return np.array(c), pc_img
 
-    def mkDE(self, img, Hs):
+    def mkDE(self, img, Hs, c, keepReg):
+        m, n = img.shape[:2]
         de = []
         for j, phi in enumerate(self.phis):
             _d = np.zeros_like(phi)
@@ -117,9 +123,9 @@ class ChanVese(object):
                 _r = np.ones_like(_d)
                 for i in np.setdiff1d(range(self.n_phi), j):
                     _r = _r * Hs[i][int(bn[i])]
-                _e = (img - self.c[t])**2
+                _e = (img - c[t])**2 * keepReg[..., np.newaxis]
                 if self.method == 'vector':
                     _e = _e.sum(axis=2)
                 _d += (-1)**(int(bn[j]) + 0) * _e * _r
-            de.append(_d * mts.delta(phi))
+            de.append(_d)
         return np.array(de)
