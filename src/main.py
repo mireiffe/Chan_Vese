@@ -2,13 +2,15 @@ from os.path import join
 
 import matplotlib.pyplot as plt
 
+import numpy as np
 from segmentation import ChanVese
-import myTools as mts
 
+import myTools as mts
+from anisodiff import anisodiff
 
 if __name__ == '__main__':
     cvseg = ChanVese(
-        N=4, nu=1, dt=.3, tol=1E-03,
+        N=4, nu=.1, dt=.3, tol=1E-03,
         method='vector', initial=None,
         # method='gray', initial=None,
         reinterm=10, vismode=True, visterm=20
@@ -30,8 +32,8 @@ if __name__ == '__main__':
             img0 = plt.imread(f'{dir_img}{nm_img:012d}.png')
         mask0 = mts.loadFile(f'{dir_mask}{nm_img:012d}.pck')
         
-        # img = mts.gaussfilt(img0, sig=.5)
-        img = a
+        # img = mts.gaussfilt(img0, sig=.5) / 255
+        img = np.stack([anisodiff(img0[..., i] / 255, niter=15) for i in range(img0.shape[2])], axis=2)
         mask = mask0 > .5
 
         sts = mts.SaveTools(name_save)

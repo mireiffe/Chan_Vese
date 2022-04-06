@@ -70,9 +70,9 @@ class ChanVese(object):
 
                 # axis1
                 try:
-                    ax1.imshow(pc_img / 255, 'gray')
+                    ax1.imshow(pc_img, 'gray')
                 except:
-                    ax1.imshow(pc_img[..., 0] / 255, 'gray')
+                    ax1.imshow(pc_img[..., 0], 'gray')
                 ax1.set_title(f'Iter: {k:d}')
                 plt.pause(0.05)
             
