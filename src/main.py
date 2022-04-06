@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
+from anisodiff import anisodiff
 from segmentation import ChanVese
 import myTools as mts
 
@@ -26,20 +27,28 @@ if __name__ == '__main__':
         final_img = final_img.reshape(image.shape)
         return final_img
 
-    dir_img = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/coco2017/validation/data'
+    dir_data = '/home/users/mireiffe/Documents/Python/Pose2Seg/downloads/coco2017/validation/'
+    dir_img = f'{dir_data}data/'
+    dir_mask = f'{dir_data}mask/'
     dir_save = './results/'
-    nm_imgs = ['000000046048']
-    nm_imgs = ['000000039769']
-    # nm_imgs = ['000000059598']
+
+    nm_imgs = [39769]
+    # nm_imgs = [59598]
     for nm_img in nm_imgs:
+        name_save = join(dir_save, f'{nm_img:012d}')
         try:
-            img0 = plt.imread(f'{dir_img}{nm_img}.jpg')
+            img0 = plt.imread(f'{dir_img}{nm_img:012d}.jpg')
         except FileExistsError:
-            img0 = plt.imread(f'{dir_img}{nm_img}.png')
-        img = mts.gaussfilt(img0, sig=1.5)
+            img0 = plt.imread(f'{dir_img}{nm_img:012d}.png')
+        mask0 = mts.loadFile(f'{dir_mask}{nm_img:012d}.pck')
+        
+        # img = mts.gaussfilt(img0, sig=.5) / 255
+        img = np.stack([anisodiff(img0[..., i], niter=50, kappa=20, gamma=0.1, option=2)
+                 for i in range(img0.shape[2])], axis=2) / 255
+        mask = mask0 > .5
 
         sts = mts.SaveTools(join(dir_save, nm_img))
-        quant_img = quantimage(img0,8)
+        quant_img = quantimage(img*255 * (1 - mask)[..., np.newaxis],5)
 
         plt.figure()
         plt.imshow(quant_img)
