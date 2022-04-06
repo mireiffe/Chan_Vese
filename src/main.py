@@ -10,7 +10,7 @@ from anisodiff import anisodiff
 
 if __name__ == '__main__':
     cvseg = ChanVese(
-        N=4, nu=.1, dt=.3, tol=1E-03,
+        N=4, nu=.1, dt=5, tol=1E-03,
         method='vector', initial=None,
         # method='gray', initial=None,
         reinterm=10, vismode=True, visterm=20

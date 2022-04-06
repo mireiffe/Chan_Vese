@@ -124,7 +124,9 @@ class ChanVese(object):
                 _r = np.ones_like(_d)
                 for i in np.setdiff1d(range(self.n_phi), j):
                     _r = _r * Hs[i][int(bn[i])]
-                _e = (img - c[t])**2 * keepReg[..., np.newaxis]
+                _rr = Hs[j][int(bn[j])]
+                _e1 = ((img - c[t])**2 * (_rr * _r)[..., np.newaxis]).sum(axis=(0, 1))
+                _e = ((img - c[t])**2 - _e1 / (_rr * _r).sum())* keepReg[..., np.newaxis]  / (_rr * _r).sum()
                 if self.method == 'vector':
                     _e = _e.sum(axis=2)
                 _d += (-1)**(int(bn[j]) + 0) * _e * _r
