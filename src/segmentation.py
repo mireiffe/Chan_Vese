@@ -53,8 +53,8 @@ class ChanVese(object):
             kapps = mts.kappa(self.phis, mode=0, stackdim=0)[0]
             dE = self.mkDE(img, Hs, c, keepReg)
 
-            # _phis = self.phis + self.dt * (self.nu * kapps - (2**(self.n_phi-1) * dE - mask) * mts.delta(self.phis))
-            _phis = self.phis + self.dt * (self.nu * kapps - (dE - mask) * mts.delta(self.phis))
+            # _phis = self.phis + self.dt * (self.nu * kapps - (dE - 2*mask) * mts.delta(self.phis))
+            _phis = self.phis + self.dt * (self.nu * kapps - (dE - 1.5*mask))
 
             print(f"Iteration: {k:d}", end='\r')
             if self.vismode and (k % self.visterm == 0):
@@ -80,7 +80,8 @@ class ChanVese(object):
                 _phis = rein.getSDF(np.where(_phis < 0, -1., 1.))
                 # _phis = rein.getSDF(_phis)
 
-            if (k >= 1500) or np.sqrt(((_phis - self.phis)**2).sum()) < self.tol:
+            err = np.sqrt(((_phis - self.phis)**2).sum()) / np.sqrt(((_phis)**2).sum())
+            if (k >= 3000) or err / self.dt < self.tol:
                 break
 
             self.phis = np.copy(_phis)

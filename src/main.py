@@ -8,10 +8,10 @@ import myTools as mts
 
 if __name__ == '__main__':
     cvseg = ChanVese(
-        N=4, nu=1, dt=1, tol=1E-03,
+        N=4, nu=1, dt=.3, tol=1E-03,
         method='vector', initial=None,
         # method='gray', initial=None,
-        reinterm=5, vismode=True, visterm=20
+        reinterm=10, vismode=True, visterm=20
         # reinterm=10, vismode=False, visterm=10
     )
 
@@ -21,7 +21,7 @@ if __name__ == '__main__':
     dir_save = './results/'
 
     nm_imgs = [39769]
-    nm_imgs = [59598]
+    # nm_imgs = [59598]
     for nm_img in nm_imgs:
         name_save = join(dir_save, f'{nm_img:012d}')
         try:
@@ -30,7 +30,8 @@ if __name__ == '__main__':
             img0 = plt.imread(f'{dir_img}{nm_img:012d}.png')
         mask0 = mts.loadFile(f'{dir_mask}{nm_img:012d}.pck')
         
-        img = mts.gaussfilt(img0, sig=1.5)
+        # img = mts.gaussfilt(img0, sig=.5)
+        img = a
         mask = mask0 > .5
 
         sts = mts.SaveTools(name_save)
