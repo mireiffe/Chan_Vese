@@ -1,12 +1,7 @@
-import os
-import time
-import pickle
-
 from tqdm import tqdm
 from colorama import Fore
 from tqdm._utils import _term_move_up
 
-import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -42,7 +37,7 @@ class ChanVese(object):
             if self.method == 'gray':
                 img = img.mean(axis=2)
 
-        rein = Reinitial(dim_stack=0)
+        rein = Reinitial(dt=.2, width=10, dim_stack=0)
         self.phis0 = self.initC(img, rein)
         self.phis = np.copy(self.phis0)
         k = 0

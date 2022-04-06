@@ -10,10 +10,10 @@ from anisodiff import anisodiff
 
 if __name__ == '__main__':
     cvseg = ChanVese(
-        N=4, nu=.1, dt=.3, tol=1E-03,
+        N=4, nu=.5, dt=.2, tol=1E-03,
         method='vector', initial=None,
         # method='gray', initial=None,
-        reinterm=10, vismode=True, visterm=20
+        reinterm=30, vismode=True, visterm=50
         # reinterm=10, vismode=False, visterm=10
     )
 
@@ -33,7 +33,8 @@ if __name__ == '__main__':
         mask0 = mts.loadFile(f'{dir_mask}{nm_img:012d}.pck')
         
         # img = mts.gaussfilt(img0, sig=.5) / 255
-        img = np.stack([anisodiff(img0[..., i] / 255, niter=15) for i in range(img0.shape[2])], axis=2)
+        img = np.stack([anisodiff(img0[..., i], niter=30, kappa=20, gamma=0.1, option=2)
+                 for i in range(img0.shape[2])], axis=2) / 255
         mask = mask0 > .5
 
         sts = mts.SaveTools(name_save)
