@@ -1,8 +1,8 @@
 from tqdm import tqdm
 from colorama import Fore
-from tqdm._utils import _term_move_up
 
 import numpy as np
+from skimage.color import quant
 import matplotlib.pyplot as plt
 
 import myTools as mts
@@ -90,6 +90,9 @@ class ChanVese(object):
         if self.initial == None:
             m, n = img.shape[:2] 
             circs = np.array([mts.patCirc(m, n, nums=nums[_], shift=shifts[_]) for _ in range(self.n_phi)])
+        if self.initial == 'smart':
+            # perform a color quantization
+            quant_img = quantimage(img*255 * (1 - mask)[..., np.newaxis],5)
         return rein.getSDF(np.where(circs, -1., 1.))
 
     def mkC(self, img, Hs, keepReg):

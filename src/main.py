@@ -38,7 +38,7 @@ if __name__ == '__main__':
         mask = mask0 > .5
 
         sts = mts.SaveTools(name_save)
-        pc_img, phis = cvseg.segmentation(img, mask=mask)
+        pc_img, phis = cvseg.segmentation(img, mask=mask, initial='smart')
 
         mts.makeDir(name_save)
         sts.imshow(img0, 'input')
