@@ -1,8 +1,8 @@
 from tqdm import tqdm
 from colorama import Fore
 
+import cv2
 import numpy as np
-from skimage.color import quant
 import matplotlib.pyplot as plt
 
 import myTools as mts
@@ -38,7 +38,7 @@ class ChanVese(object):
                 img = img.mean(axis=2)
 
         rein = Reinitial(dt=.2, width=10, dim_stack=0)
-        self.phis0 = self.initC(img, rein)
+        self.phis0 = self.initC(img, rein, mask)
         self.phis = np.copy(self.phis0)
         k = 0
         _, (ax0, ax1) = plt.subplots(1, 2)
@@ -78,22 +78,44 @@ class ChanVese(object):
             err = np.sqrt(((_phis - self.phis)**2).sum()) / np.sqrt(((_phis)**2).sum())
             if (k >= 3000) or err / self.dt < self.tol:
                 break
+            if k == 0: pc_img0 = np.copy(pc_img)
 
             self.phis = np.copy(_phis)
             k += 1
-        return pc_img, _phis
+        return pc_img, _phis, c, pc_img0
         
-    def initC(self, img: np.ndarray, rein):
+    def initC(self, img: np.ndarray, rein, mask):
         shifts = [(0, 0), (1.75, 1), (1, 1.75), (1.35, 1.35)]
         # shifts = [(0, 0)] * 4
         nums = [20, 20, 20, 20]
+        m, n = img.shape[:2] 
         if self.initial == None:
-            m, n = img.shape[:2] 
             circs = np.array([mts.patCirc(m, n, nums=nums[_], shift=shifts[_]) for _ in range(self.n_phi)])
+            return rein.getSDF(np.where(circs, -1., 1.))
         if self.initial == 'smart':
             # perform a color quantization
-            quant_img = quantimage(img*255 * (1 - mask)[..., np.newaxis],5)
-        return rein.getSDF(np.where(circs, -1., 1.))
+            def quantimage(img,k):
+                _idx = np.where((1 - mask))
+                condition = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER,20,1.0)
+                ipt = np.stack([img[..., i][_idx] for i in range(img.shape[2])], axis=-1)
+                _,label, center = cv2.kmeans(ipt, k , None, condition,10,cv2.KMEANS_RANDOM_CENTERS)
+                label += 1
+
+                dist = np.zeros((k, k))
+                for i in range(k):
+                    for j in range(i, k):
+                        dist[i][j] = np.sum((center[i] - center[j])**2)
+                sdist = np.argmax(dist)
+                res = np.zeros_like(img[..., 0])
+                res[_idx] = label.flatten()
+                return res, sdist
+            num_c = 5
+            quant_img, sdist = quantimage(img, num_c)
+            _r = np.stack([np.where(quant_img == (sdist // num_c + 1), -1., 1.),
+                            np.where(quant_img == (sdist % num_c + 1), -1., 1.)], axis=0)
+            # _r = np.stack([np.where(quant_img == (sdist % num_c + 1), -1., 1.),
+            #                 mts.patCirc(m, n, nums=20)], axis=0)
+            return rein.getSDF(_r)
 
     def mkC(self, img, Hs, keepReg):
         c = []
