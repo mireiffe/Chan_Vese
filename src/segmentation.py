@@ -87,10 +87,10 @@ class ChanVese(object):
     def initC(self, img: np.ndarray, rein, mask):
         shifts = [(0, 0), (1.75, 1), (1, 1.75), (1.35, 1.35)]
         # shifts = [(0, 0)] * 4
-        nums = [20, 20, 20, 20]
+        nums = [30, 30, 30, 30]
         m, n = img.shape[:2] 
         if self.initial == None:
-            circs = np.array([mts.patCirc(m, n, nums=nums[_], shift=shifts[_]) for _ in range(self.n_phi)])
+            circs = np.array([mts.patCirc(m, n, nums=nums[_], shift=shifts[_], comple=_) for _ in range(self.n_phi)])
             return rein.getSDF(np.where(circs, -1., 1.))
         if self.initial == 'smart':
             # perform a color quantization
@@ -109,12 +109,14 @@ class ChanVese(object):
                 res = np.zeros_like(img[..., 0])
                 res[_idx] = label.flatten()
                 return res, sdist
-            num_c = 5
+            num_c = self.n_phi * 2
             quant_img, sdist = quantimage(img, num_c)
-            _r = np.stack([np.where(quant_img == (sdist // num_c + 1), -1., 1.),
-                            np.where(quant_img == (sdist % num_c + 1), -1., 1.)], axis=0)
-            # _r = np.stack([np.where(quant_img == (sdist % num_c + 1), -1., 1.),
-            #                 mts.patCirc(m, n, nums=20)], axis=0)
+            uqi, cnt_qi = np.unique(quant_img, return_counts=True)
+            srt_qi = np.argsort(cnt_qi[:0:-1])
+            # _r = np.stack([np.where(quant_img == (sdist // num_c + 1), -1., 1.),
+                            # np.where(quant_img == (sdist % num_c + 1), -1., 1.)], axis=0)
+            _r = np.stack([np.where(quant_img ==uqi[srt_qi[k] + 1], -1., 1.)
+                            for k in range(self.n_phi)], axis=0)
             return rein.getSDF(_r)
 
     def mkC(self, img, Hs, keepReg):
