@@ -47,7 +47,7 @@ if __name__ == '__main__':
                  for i in range(img0.shape[2])], axis=2) / 255
         mask = mask0 > .5
 
-        sts = mts.SaveTools(join(dir_save, nm_img))
+        sts = mts.SaveTools(join(dir_save, f'{nm_img:012d}'))
         quant_img = quantimage(img*255 * (1 - mask)[..., np.newaxis],5)
 
         plt.figure()
